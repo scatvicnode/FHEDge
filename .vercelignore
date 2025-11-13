@@ -1,9 +1,16 @@
-node_modules
-artifacts
-cache
+# Ignore backend stuff
+contracts/
+scripts/
+artifacts/
+cache/
 hardhat.config.js
-contracts
-scripts
-package.json
-package-lock.json
+
+# Ignore root node modules
+node_modules/
+
+# Ignore environment files
 .env
+.env.example
+
+# DO NOT ignore frontend folder!
+# Jangan pernah menulis: frontend/package.json
