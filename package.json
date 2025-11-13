@@ -5,7 +5,7 @@
   "scripts": {
     "test": "hardhat test",
     "compile": "hardhat compile",
-    "start": "cd frontend && npm run dev"
+    "start": "cd frontend && npm run dev",
     "deploy": "hardhat run scripts/deploy.js",
     "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
     "interact": "hardhat run scripts/interact.js",
