@@ -1,0 +1,38 @@
+{
+  "name": "confidential-pledge",
+  "version": "1.0.0",
+  "description": "A private crowdfunding dApp built with Zama's fhevm",
+  "scripts": {
+    "test": "hardhat test",
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.js",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "interact": "hardhat run scripts/interact.js",
+    "clean": "hardhat clean",
+    "node": "hardhat node"
+  },
+  "keywords": [
+    "zama",
+    "fhevm",
+    "crowdfunding",
+    "privacy",
+    "blockchain"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@fhevm/solidity": "^0.8.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
+    "@nomicfoundation/hardhat-ethers": "^4.0.3",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@zama-fhe/oracle-solidity": "^0.2.0",
+    "chai": "^4.5.0",
+    "dotenv": "^16.0.3",
+    "ethers": "^6.15.0",
+    "hardhat": "^2.27.0"
+  },
+  "dependencies": {
+    "fhevm": "^0.6.2",
+    "fhevm-core-contracts": "^0.6.1"
+  }
+}
