@@ -49,7 +49,7 @@ Total Fees Collected: 0.016 ETH
 #### Method 2: Check Smart Contract
 
 **Using Etherscan:**
-1. Go to: `https://sepolia.etherscan.io/address/0xEBcf8A0945d6c041e3F49CC81A28653cFBA46399`
+1. Go to: `https://sepolia.etherscan.io/address/0x7bF50e4428605471cAb4da7E44CE036c5DbEBe6d`
 2. Click "Contract" tab
 3. Click "Read Contract"
 4. Find `platformOwner` function
@@ -352,7 +352,7 @@ Compiled 1 Solidity file successfully (evm target: cancun).
 ### Check Contract on Etherscan
 
 **Steps:**
-1. Go to: `https://sepolia.etherscan.io/address/0xEBcf8A0945d6c041e3F49CC81A28653cFBA46399`
+1. Go to: `https://sepolia.etherscan.io/address/0x7bF50e4428605471cAb4da7E44CE036c5DbEBe6d`
 2. Check "Contract" tab
 3. Verify functions exist:
    - ✅ `createCampaign`
