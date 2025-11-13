@@ -1,4 +1,6 @@
 require("dotenv").config();
+require("@nomicfoundation/hardhat-ethers");
+require("@nomicfoundation/hardhat-chai-matchers");
 const fs = require("fs");
 const path = require("path");
 
