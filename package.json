@@ -1,11 +1,11 @@
 {
-  "name": "confidential-pledge",
+  "name": "FHEDge",
   "version": "1.0.0",
-  "description": "A private crowdfunding dApp built with Zama's fhevm",
+  "description": "A private crowdfunding dApp built with Zama's FHEVM",
   "scripts": {
     "test": "hardhat test",
     "compile": "hardhat compile",
-    "start": "cd frontend && npm run dev",
+    "start": "cd ../FHEDge-frontend && npm run dev",
     "deploy": "hardhat run scripts/deploy.js",
     "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
     "interact": "hardhat run scripts/interact.js",
