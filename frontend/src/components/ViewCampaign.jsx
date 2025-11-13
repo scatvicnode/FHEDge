@@ -1,4 +1,3 @@
-import React from 'react';
 
 function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
   const timeLeft = campaign.deadline * 1000 - Date.now();
@@ -19,11 +18,11 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
     if (campaign.claimed) {
       return <span className="badge badge-claimed">🎉 Claimed</span>;
     }
-    if (!campaign.active) {
-      return <span className="badge badge-ended">⏰ Ended</span>;
-    }
     if (isExpired) {
       return <span className="badge badge-expired">⏰ Expired</span>;
+    }
+    if (!campaign.active) {
+      return <span className="badge badge-ended">⏰ Ended</span>;
     }
     return <span className="badge badge-active">✨ Active</span>;
   };
@@ -83,7 +82,7 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
             <div className="detail-item">
               <div className="detail-label">📊 Status</div>
               <div className="detail-value">
-                {campaign.active ? 'Active' : campaign.claimed ? 'Claimed' : 'Ended'}
+                {campaign.claimed ? 'Claimed' : isExpired ? 'Expired' : campaign.active ? 'Active' : 'Ended'}
               </div>
             </div>
 
@@ -130,7 +129,7 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
               </button>
             )}
             
-            {isOwner && campaign.active && isExpired && (
+            {isOwner && campaign.active && isExpired && !campaign.claimed && campaign.ethBalance > 0 && (
               <button 
                 onClick={async () => {
                   try {
@@ -145,6 +144,16 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
                 className="btn-success btn-large"
               >
                 🎉 Claim Campaign
+              </button>
+            )}
+
+            {isOwner && campaign.active && isExpired && !campaign.claimed && campaign.ethBalance === 0 && (
+              <button 
+                disabled
+                className="btn-claim-disabled btn-large"
+                title="No pledges received yet"
+              >
+                💸 No Funds to Claim
               </button>
             )}
 

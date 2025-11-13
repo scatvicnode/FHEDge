@@ -1,12 +1,29 @@
-import React from 'react';
 
 function Dashboard({ campaigns, myCampaigns, account, onRefresh, lastRefresh }) {
-  const activeCampaigns = campaigns.filter(c => c.active).length;
-  const endedCampaigns = campaigns.filter(c => !c.active && !c.claimed).length;
+  // Count campaigns based on actual status (considering expiration)
+  const activeCampaigns = campaigns.filter(c => {
+    const isExpired = c.deadline * 1000 < Date.now();
+    return c.active && !isExpired;
+  }).length;
+  
+  const endedCampaigns = campaigns.filter(c => {
+    const isExpired = c.deadline * 1000 < Date.now();
+    return (isExpired || !c.active) && !c.claimed;
+  }).length;
+  
   const claimedCampaigns = campaigns.filter(c => c.claimed).length;
   
-  const myActive = myCampaigns.filter(c => c.active).length;
-  const myEnded = myCampaigns.filter(c => !c.active && !c.claimed).length;
+  // My campaigns with accurate status
+  const myActive = myCampaigns.filter(c => {
+    const isExpired = c.deadline * 1000 < Date.now();
+    return c.active && !isExpired;
+  }).length;
+  
+  const myEnded = myCampaigns.filter(c => {
+    const isExpired = c.deadline * 1000 < Date.now();
+    return (isExpired || !c.active) && !c.claimed;
+  }).length;
+  
   const myClaimed = myCampaigns.filter(c => c.claimed).length;
 
   const getTimeSinceRefresh = () => {

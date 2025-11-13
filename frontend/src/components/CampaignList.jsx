@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 function CampaignList({ campaigns, loading, account, contract, onPledge, onView, onRefresh }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -10,12 +10,13 @@ function CampaignList({ campaigns, loading, account, contract, onPledge, onView,
       campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       campaign.description.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Status filter
+    // Status filter - use actual time-based status, not just contract.active
+    const isExpired = campaign.deadline * 1000 < Date.now();
     let matchesStatus = true;
     if (filterStatus === 'active') {
-      matchesStatus = campaign.active;
+      matchesStatus = campaign.active && !isExpired;
     } else if (filterStatus === 'ended') {
-      matchesStatus = !campaign.active && !campaign.claimed;
+      matchesStatus = (isExpired || !campaign.active) && !campaign.claimed;
     } else if (filterStatus === 'claimed') {
       matchesStatus = campaign.claimed;
     }
@@ -46,16 +47,23 @@ function CampaignList({ campaigns, loading, account, contract, onPledge, onView,
   };
 
   const getStatusBadge = (campaign) => {
+    // Check claimed first
     if (campaign.claimed) {
       return <span className="badge badge-claimed">Claimed</span>;
     }
-    if (!campaign.active) {
-      return <span className="badge badge-ended">Ended</span>;
-    }
+    
+    // Check if expired (prioritize over contract.active)
     const timeLeft = campaign.deadline * 1000 - Date.now();
     if (timeLeft < 0) {
       return <span className="badge badge-expired">Expired</span>;
     }
+    
+    // Check if ended but not expired (manually deactivated)
+    if (!campaign.active) {
+      return <span className="badge badge-ended">Ended</span>;
+    }
+    
+    // Still active and not expired
     return <span className="badge badge-active">Active</span>;
   };
 
@@ -140,7 +148,7 @@ function CampaignList({ campaigns, loading, account, contract, onPledge, onView,
             const isOwner = campaign.isOwner;
             const isExpired = campaign.deadline * 1000 < Date.now();
             const canPledge = campaign.active && !isExpired && !isOwner && !campaign.hasPledged;
-            const canClaim = isOwner && campaign.active && isExpired && !campaign.claimed;
+            const canClaim = isOwner && campaign.active && isExpired && !campaign.claimed && campaign.ethBalance > 0;
             const canRefund = !isOwner && !campaign.active && !campaign.claimed;
 
             return (
@@ -216,6 +224,16 @@ function CampaignList({ campaigns, loading, account, contract, onPledge, onView,
                       className="btn-claim"
                     >
                       💰 Claim Funds
+                    </button>
+                  )}
+
+                  {isOwner && campaign.active && isExpired && !campaign.claimed && campaign.ethBalance === 0 && (
+                    <button 
+                      disabled
+                      className="btn-claim-disabled"
+                      title="No pledges received yet"
+                    >
+                      💸 No Funds to Claim
                     </button>
                   )}
 
