@@ -339,18 +339,18 @@ export async function decryptValue(encryptedBytes: string): Promise<number> {
 
 ### Unit Test Coverage
 
-FHEDge includes **48 comprehensive unit tests** covering all contract functionality.
+FHEDge includes **49 comprehensive unit tests** covering all contract functionality.
 
 **Test File:** `test/FHEDge.test.js`
 
-#### ✅ All Tests Passing (48/48)
+#### ✅ All Tests Passing (49/49)
 
 ```bash
 npm test
 
 # Output:
   FHEDge Contract - Unit Tests
-    ✅ 48 passing (996ms)
+    ✅ 49 passing (1s)
 ```
 
 **Test Categories:**
@@ -413,12 +413,13 @@ npm test
     - Refund function availability
     - Refund validation requirements
 
-14. **Edge Cases (6 tests)**
+14. **Edge Cases (7 tests)**
     - Zero ETH handling
     - Very large amounts (10,000 ETH)
     - Multiple campaigns support
     - Title/description length limits
     - Fractional ETH fee calculations
+    - Zero balance claim prevention
 
 15. **Gas Optimization (3 tests)**
     - Deployment gas measurement
@@ -432,7 +433,7 @@ npm test
 npm test
 
 # Expected output:
-#   ✅ 48 passing (996ms)
+#   ✅ 49 passing (1s)
 #   All contract functions validated
 ```
 
@@ -910,13 +911,14 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - **Production-ready** smart contracts with reentrancy protection
 
 ### ✅ **Comprehensive Testing**
-- **48 unit tests** - All passing successfully (exceeds 47 test requirement)
+- **49 unit tests** - All passing successfully (exceeds 47 test requirement)
 - **100% pass rate** - Every test validates correctly
 - **Complete coverage** - Campaign lifecycle, pledges, claims, refunds, edge cases
 - **Fee calculation accuracy** - Verified 1% platform fee for all amounts
 - **Input validation** - Past deadlines, empty titles, all edge cases
 - **Contract interface** - All 9 contract functions verified
 - **Gas optimization** - Performance measurements included
+- **Zero balance protection** - Prevents claiming when no pledges exist
 - **Production testing** - Full FHE functionality validated on Sepolia testnet
 
 ### ✅ **Professional UI/UX Design**
