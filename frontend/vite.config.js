@@ -1,28 +1,22 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 3500,
-    open: true
-  },
-  define: {
-    'process.env': {}
-  },
+
   resolve: {
     alias: {
       buffer: 'buffer/',
-      crypto: 'crypto-browserify',
       stream: 'stream-browserify',
-      util: 'util/'
+      util: 'util/',
     }
   },
+
+  define: {
+    global: 'globalThis',
+  },
+
   optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: 'globalThis'
-      }
-    }
+    include: ['buffer', 'stream-browserify', 'util'],
   }
-})
+});
