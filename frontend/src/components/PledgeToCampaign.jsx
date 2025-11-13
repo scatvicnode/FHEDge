@@ -108,12 +108,30 @@ function PledgeToCampaign({ contract, fhevmInstance, account, campaign, onClose,
               autoFocus
             />
             <small>💡 Examples: 0.1 ETH, 1 ETH, 0.01 ETH</small>
-            {/* <div className="fee-notice-pledge">
-              ℹ️ <strong>1% platform fee</strong> will be automatically sent to platform owner. Campaign receives 99%.
-            </div> */}
-            <div className="privacy-notice">
-              <div>
-                ℹ️ <strong>1% platform fee</strong> will be automatically sent to platform owner. Campaign receives 99%.
+            <div 
+              style={{
+                marginTop: '18px',
+                padding: '16px 18px',
+                borderRadius: '12px',
+                background: 'var(--secondary)',
+                border: '2px solid var(--primary)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px',
+              }}
+            >
+              <span style={{ fontSize: '22px', marginTop: '2px' }}>ℹ️</span>
+
+              <div style={{ color: '#d1d5db', fontSize: '14px', lineHeight: '1.6' }}>
+                <strong style={{ color: 'var(--primary)' }}>
+                  1% platform fee
+                </strong>
+                {' '}will be automatically sent to platform owner.
+                <br />
+                Campaign receives{' '}
+                <strong style={{ color: 'var(--primary)' }}>
+                  99%.
+                </strong>
               </div>
             </div>
           </div>
