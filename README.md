@@ -486,7 +486,7 @@ cd frontend && npm run dev
 
 1. **Clone the repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/scatvicnode/FHEDge
 cd FHEDge
 ```
 
