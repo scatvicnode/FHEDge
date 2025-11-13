@@ -74,14 +74,14 @@ function App() {
     }
   }, [contract, account]);
 
-  // Auto-refresh campaigns every 15 seconds when connected
+  // Auto-refresh campaigns every 5 minutes when connected
   useEffect(() => {
     if (!contract || !account) return;
     
     const interval = setInterval(() => {
       console.log('🔄 Auto-refreshing campaigns...');
       loadCampaigns(true); // Silent refresh (no loading spinner)
-    }, 15000); // 15 seconds
+    }, 300000); // 5 minutes
     
     return () => clearInterval(interval);
   }, [contract, account]);
