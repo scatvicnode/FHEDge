@@ -508,7 +508,7 @@ cd ..
 **Root `.env`** (for deployment):
 ```env
 SEPOLIA_RPC_URL=https://eth-sepolia.public.blastapi.io
-PRIVATE_KEY=your_private_key_without_0x_prefix
+PRIVATE_KEY=your_private_key_with_0x_prefix
 CONTRACT_ADDRESS=
 ```
 
@@ -850,7 +850,7 @@ npm run dev
 
 ### Live Contract on Sepolia
 
-**Contract Address:** `0x7bF50e4428605471cAb4da7E44CE036c5DbEBe6d`
+**Contract Address:** `0x3cEdff9D57EC046BeA6E2787d3BB07d07778B0F9`
 
 **Verify on Etherscan:**
 ```

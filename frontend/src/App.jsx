@@ -25,7 +25,7 @@ const CONTRACT_ABI = [
 ];
 
 // Contract address from environment variable
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x7bF50e4428605471cAb4da7E44CE036c5DbEBe6d";
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x3cEdff9D57EC046BeA6E2787d3BB07d07778B0F9";
 const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111
 
 function App() {
