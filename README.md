@@ -1004,3 +1004,4 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 *Empowering private fundraising with ZAMA's Fully Homomorphic Encryption*
 
 **Try it now:** Deploy to Sepolia and start fundraising privately!
+
