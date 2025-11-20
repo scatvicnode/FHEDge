@@ -1,22 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { FHE, externalEuint64, euint64, ebool } from "@fhevm/solidity/lib/FHE.sol";
-import { SepoliaConfig } from "@fhevm/solidity/config/ZamaConfig.sol";
+import {FHE, externalEuint64, euint64, ebool} from "@fhevm/solidity/lib/FHE.sol";
+import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 
 /**
- * @title FHEDge
- * @notice A privacy-preserving crowdfunding contract using Fully Homomorphic Encryption (FHE)
- * @dev Campaign goals and pledge amounts remain encrypted throughout the process
- * 
- * Key Features:
+ * @title FHEDge - Privacy-Preserving Crowdfunding with FHE
+ * @dev FHEVM v0.9 Compatible: Uses self-relaying public decryption (no Oracle dependency)
+ * Key Changes in v0.9:
+ * - Replaced SepoliaConfig with ZamaEthereumConfig
+ * - Updated to new FHE.fromExternal pattern with proper proof verification
+ * - Maintains all original FHEDge functionality with encrypted goals/pledges
+
+  * Key Features:
  * - Encrypted campaign goals (competitors can't see your target)
  * - Private pledge amounts (donor privacy maintained)
  * - Confidential total tracking using FHE operations
  * - Goal verification without revealing exact amounts
  * - Owner-controlled decryption for campaign management
  */
-contract FHEDge is SepoliaConfig {
+contract FHEDge is ZamaEthereumConfig {
     // Platform fee: 1% of each pledge goes to contract owner
     uint256 public constant PLATFORM_FEE_PERCENT = 1;
     uint256 public constant FEE_DENOMINATOR = 100;
@@ -52,6 +55,8 @@ contract FHEDge is SepoliaConfig {
     // Counter for campaign IDs
     uint256 public nextCampaignId;
     
+    bool private _locked;
+    
     // Events
     event CampaignCreated(
         uint256 indexed campaignId,
@@ -80,7 +85,14 @@ contract FHEDge is SepoliaConfig {
         address indexed platformOwner,
         uint256 feeAmount
     );
-    
+
+    modifier nonReentrant() {
+        require(!_locked, "Reentrancy detected");
+        _locked = true;
+        _;
+        _locked = false;
+    }
+
     /**
      * @notice Constructor sets the platform owner (immutable)
      */
@@ -90,11 +102,7 @@ contract FHEDge is SepoliaConfig {
 
     /**
      * @notice Create a new crowdfunding campaign with encrypted goal
-     * @param inGoal Encrypted goal amount as externalEuint64
-     * @param inputProof Proof for the encrypted input
-     * @param deadline Campaign end timestamp
-     * @param title Campaign title
-     * @param description Campaign description
+     * @dev FHEVM v0.9: Uses ZamaEthereumConfig and updated FHE.fromExternal pattern
      */
     function createCampaign(
         externalEuint64 inGoal,
@@ -106,7 +114,7 @@ contract FHEDge is SepoliaConfig {
         require(deadline > block.timestamp, "Deadline must be in the future");
         require(bytes(title).length > 0, "Title cannot be empty");
         
-        // Convert external encrypted input to euint64
+        // v0.9: Convert external encrypted input to euint64 with proof verification
         euint64 goal = FHE.fromExternal(inGoal, inputProof);
         
         uint256 campaignId = nextCampaignId++;
@@ -123,7 +131,7 @@ contract FHEDge is SepoliaConfig {
             ethBalance: 0  // Initialize ETH balance
         });
         
-        // Allow contract and owner to access the encrypted goal
+        // v0.9: Allow contract and owner to access the encrypted goal
         FHE.allowThis(goal);
         FHE.allow(goal, msg.sender);
         
@@ -138,6 +146,7 @@ contract FHEDge is SepoliaConfig {
 
     /**
      * @notice Make an encrypted pledge to a campaign
+     * @dev FHEVM v0.9: Updated to use proper proof verification pattern
      * @param campaignId The campaign to pledge to
      * @param inAmount Encrypted pledge amount as externalEuint64
      * @param inputProof Proof for the encrypted input
@@ -147,7 +156,7 @@ contract FHEDge is SepoliaConfig {
         uint256 campaignId,
         externalEuint64 inAmount,
         bytes calldata inputProof
-    ) external payable {
+    ) external payable nonReentrant {
         Campaign storage campaign = campaigns[campaignId];
         
         require(campaign.active, "Campaign is not active");
@@ -155,7 +164,7 @@ contract FHEDge is SepoliaConfig {
         require(!hasPledged[campaignId][msg.sender], "Already pledged to this campaign");
         require(msg.value > 0, "Must send ETH with pledge");
         
-        // Convert external encrypted input to euint64
+        // v0.9: Convert external encrypted input to euint64 with proof verification
         euint64 amount = FHE.fromExternal(inAmount, inputProof);
         
         // Calculate platform fee (1% of pledge)
@@ -177,10 +186,10 @@ contract FHEDge is SepoliaConfig {
         ethPledges[campaignId][msg.sender] = amountAfterFee;
         campaign.ethBalance += amountAfterFee;
         
-        // Add to total using FHE addition
+        // Add to total using FHE addition (homomorphic operation)
         campaign.totalPledged = FHE.add(campaign.totalPledged, amount);
         
-        // Grant access permissions
+        // v0.9: Grant access permissions for encrypted data
         FHE.allowThis(amount);
         FHE.allow(amount, msg.sender);
         FHE.allowThis(campaign.totalPledged);
@@ -191,6 +200,7 @@ contract FHEDge is SepoliaConfig {
 
     /**
      * @notice Check if campaign goal has been reached (returns encrypted boolean)
+     * @dev FHEVM v0.9: Uses FHE.ge for encrypted comparison
      * @param campaignId The campaign to check
      * @return Encrypted boolean indicating if goal is reached
      */
@@ -198,16 +208,16 @@ contract FHEDge is SepoliaConfig {
         Campaign storage campaign = campaigns[campaignId];
         require(campaign.active || campaign.claimed, "Campaign does not exist");
         
-        // Compare: totalPledged >= goal
+        // Compare: totalPledged >= goal (returns encrypted boolean)
         return FHE.ge(campaign.totalPledged, campaign.goal);
     }
 
     /**
      * @notice Campaign owner claims funds - DIRECTLY transfers ALL campaign ETH to owner!
+     * @dev Added nonReentrant modifier for security and Transfers campaign.ethBalance (all pledged ETH) directly to owner's wallet
      * @param campaignId The campaign to claim from
-     * @dev Transfers campaign.ethBalance (all pledged ETH) directly to owner's wallet
      */
-    function claimCampaign(uint256 campaignId) external {
+    function claimCampaign(uint256 campaignId) external nonReentrant {
         Campaign storage campaign = campaigns[campaignId];
         
         require(msg.sender == campaign.owner, "Only owner can claim");
@@ -233,9 +243,10 @@ contract FHEDge is SepoliaConfig {
     /**
      * @notice Pledgers can request refund if campaign failed or was not claimed
      * @param campaignId The campaign to get refund from
+     * @dev Added nonReentrant modifier for security
      * @dev Returns the EXACT ETH amount you pledged - direct transfer back to you!
      */
-    function refund(uint256 campaignId) external {
+    function refund(uint256 campaignId) external nonReentrant {
         Campaign storage campaign = campaigns[campaignId];
         
         require(hasPledged[campaignId][msg.sender], "No pledge found");
