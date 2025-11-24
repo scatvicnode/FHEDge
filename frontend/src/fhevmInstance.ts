@@ -47,7 +47,7 @@ class NetworkUtils {
     try {
       const chainId = await this.getCurrentChainId();
       console.log('🔗 Connected to chain ID:', chainId);
-      
+
       if (!this.isSepoliaNetwork(chainId)) {
         console.warn('⚠️  Not on Sepolia testnet. Current chain:', chainId);
       }
@@ -78,7 +78,7 @@ class KeypairManager {
 
   static getOrCreateKeypair(sdk: any): Keypair {
     const stored = this.loadStoredKeypair();
-    
+
     if (stored) {
       console.log('✅ Using stored keypair');
       return stored;
@@ -88,7 +88,7 @@ class KeypairManager {
     const keypair = this.generateKeypair(sdk);
     this.storeKeypair(keypair);
     console.log('✅ Keypair generated and stored');
-    
+
     return keypair;
   }
 }
@@ -97,26 +97,26 @@ class KeypairManager {
 class SdkValidator {
   static validateGlobalSdk(): any {
     const sdk = window.RelayerSDK || window.relayerSDK;
-    
+
     if (!sdk) {
       console.error('❌ window.RelayerSDK not found!');
-      console.error('Available window properties:', 
+      console.error('Available window properties:',
         Object.keys(window).filter(k => k.toLowerCase().includes('relay'))
       );
       throw new Error(ErrorMessages.NO_SDK);
     }
-    
+
     return sdk;
   }
 
   static validateSdkExports(sdk: any): void {
     const { initSDK, createInstance, SepoliaConfig } = sdk;
-    
+
     if (!initSDK || !createInstance || !SepoliaConfig) {
-      console.error('❌ Missing exports!', { 
-        hasInitSDK: !!initSDK, 
-        hasCreateInstance: !!createInstance, 
-        hasSepoliaConfig: !!SepoliaConfig 
+      console.error('❌ Missing exports!', {
+        hasInitSDK: !!initSDK,
+        hasCreateInstance: !!createInstance,
+        hasSepoliaConfig: !!SepoliaConfig
       });
       throw new Error(ErrorMessages.INCOMPLETE_SDK);
     }
@@ -127,7 +127,7 @@ class SdkValidator {
 class FheInitializer {
   static async initializeWasm(sdk: any): Promise<void> {
     console.log('⚙️  Initializing SDK (loading WASM)...');
-    
+
     try {
       await sdk.initSDK();
       console.log('✅ WASM loaded successfully');
@@ -147,13 +147,10 @@ class FheInitializer {
   }
 
   static async createFheInstance(sdk: any, config: FheConfig): Promise<any> {
-    console.log('🏗️  Creating FHE instance with keypair...');
-    console.log('📡 Relayer URL:', config.relayerUrl);
-    
+
     try {
       const instance = await sdk.createInstance(config);
       console.log('✅ FHE Instance created successfully!');
-      console.log('✅ FHEVM v0.9 ready! (SDK v0.3.0-5)');
       return instance;
     } catch (error) {
       console.error('❌ Failed to create FHE instance:', error);
@@ -209,10 +206,10 @@ export async function initializeFheInstance(): Promise<any> {
     // Initialize core components
     await FheInitializer.initializeWasm(sdk);
     await NetworkUtils.validateNetwork();
-    
+
     const keypair = KeypairManager.getOrCreateKeypair(sdk);
     const config = FheInitializer.createConfig(sdk, keypair);
-    
+
     fheInstance = await FheInitializer.createFheInstance(sdk, config);
     return fheInstance;
 
@@ -228,35 +225,76 @@ export function getFheInstance(): any {
   return fheInstance;
 }
 
-export async function decryptValue(encryptedBytes: string): Promise<number> {
+/**
+ * Public decryption for multiple handles (Step 2 of 3-step workflow)
+ * Used in campaign result decryption to get cleartext values + proof
+ * @param handles Array of ciphertext handles (bytes32) to decrypt
+ * @returns Object with clearValues, abiEncodedClearValues, and decryptionProof
+ */
+export async function publicDecryptMultiple(handles: string[]): Promise<{
+  clearValues: Record<string, bigint | boolean | string>;
+  abiEncodedClearValues: string;
+  decryptionProof: string;
+}> {
   const fhe = getFheInstance();
-  
-  this.validateCiphertext(encryptedBytes);
+
+  // Validate all handles
+  handles.forEach(handle => {
+    validateCiphertext(handle);
+  });
 
   try {
-    const values = await fhe.publicDecrypt([encryptedBytes]);
-    return Number(values[encryptedBytes]);
+    console.log('🔓 Requesting public decryption for handles:', handles);
+    const results = await fhe.publicDecrypt(handles);
+    console.log('✅ Public decryption successful');
+    return results;
   } catch (error: any) {
-    console.error('Decryption failed:', error);
-    throw this.handleDecryptionError(error);
+    console.error('❌ Public decryption failed:', error);
+    throw handleDecryptionError(error);
+  }
+}
+
+/**
+ * User decryption for viewing own encrypted data
+ * @param handle Ciphertext handle to decrypt
+ * @param contractAddress Contract address that owns the ciphertext
+ * @param userAddress User address requesting decryption
+ * @returns Decrypted value as bigint
+ */
+export async function userDecryptValue(
+  handle: string,
+  contractAddress: string,
+  userAddress: string
+): Promise<bigint> {
+  const fhe = getFheInstance();
+  validateCiphertext(handle);
+
+  try {
+    console.log('🔓 User decrypting handle:', handle);
+    const result = await fhe.userDecrypt(handle, contractAddress, userAddress);
+    console.log('✅ User decryption successful');
+    return BigInt(result);
+  } catch (error: any) {
+    console.error('❌ User decryption failed:', error);
+    throw handleDecryptionError(error);
   }
 }
 
 // ============ DECRYPTION UTILITIES ============
 function validateCiphertext(encryptedBytes: string): void {
-  if (typeof encryptedBytes !== "string" || 
-      !encryptedBytes.startsWith("0x") || 
-      encryptedBytes.length !== 66) {
+  if (typeof encryptedBytes !== "string" ||
+    !encryptedBytes.startsWith("0x") ||
+    encryptedBytes.length !== 66) {
     throw new Error(ErrorMessages.INVALID_CIPHERTEXT);
   }
 }
 
 function handleDecryptionError(error: any): Error {
   const message = error?.message || '';
-  
+
   if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
     return new Error(ErrorMessages.DECRYPTION_UNAVAILABLE);
   }
-  
+
   return error;
 }

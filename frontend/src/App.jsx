@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { initializeFheInstance } from './fhevmInstance';
-import CreateCampaign from './components/CreateCampaign';
+import { useEffect, useState } from 'react';
 import CampaignList from './components/CampaignList';
+import CreateCampaign from './components/CreateCampaign';
+import Dashboard from './components/Dashboard';
 import PledgeToCampaign from './components/PledgeToCampaign';
 import ViewCampaign from './components/ViewCampaign';
-import Dashboard from './components/Dashboard';
+import { initializeFheInstance } from './fhevmInstance';
 
-// Contract ABI - UPDATED FOR FHE v0.8+ (externalEuint64 = bytes32 in ABI)
+// Contract ABI - UPDATED FOR FHE v0.9+ with Public Decryption Support
 const CONTRACT_ABI = [
   "function nextCampaignId() view returns (uint256)",
   "function createCampaign(bytes32 inGoal, bytes calldata inputProof, uint256 deadline, string calldata title, string calldata description) returns (uint256)",
@@ -17,11 +17,19 @@ const CONTRACT_ABI = [
   "function refund(uint256 campaignId)",
   "function hasPledged(uint256 campaignId, address pledger) view returns (bool)",
   "function platformOwner() view returns (address)",
+  // Public Decryption Functions (NEW)
+  "function requestDecryptCampaignResult(uint256 campaignId)",
+  "function callbackDecryptCampaignResult(uint256 campaignId, bytes memory cleartexts, bytes memory decryptionProof)",
+  "function getDecryptedResults(uint256 campaignId) view returns (uint8 status, uint64 totalPledged, bool goalReached)",
+  // Events
   "event CampaignCreated(uint256 indexed campaignId, address indexed owner, string title, uint256 deadline)",
   "event PledgeMade(uint256 indexed campaignId, address indexed pledger)",
   "event CampaignClaimed(uint256 indexed campaignId, address indexed owner)",
   "event RefundIssued(uint256 indexed campaignId, address indexed pledger)",
-  "event PlatformFeeTransferred(uint256 indexed campaignId, address indexed platformOwner, uint256 feeAmount)"
+  "event PlatformFeeTransferred(uint256 indexed campaignId, address indexed platformOwner, uint256 feeAmount)",
+  // Decryption Events (NEW)
+  "event DecryptionRequested(uint256 indexed campaignId, bytes32 totalPledgedHandle, bytes32 goalReachedHandle)",
+  "event DecryptionCompleted(uint256 indexed campaignId, uint64 decryptedTotalPledged, bool goalReached)"
 ];
 
 // Contract address from environment variable
@@ -36,16 +44,16 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  
+
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPledgeModal, setShowPledgeModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
-  
+
   // Tab state
   const [activeTab, setActiveTab] = useState('all'); // 'all' or 'mine'
-  
+
   // Campaigns data
   const [campaigns, setCampaigns] = useState([]);
   const [myCampaigns, setMyCampaigns] = useState([]);
@@ -77,12 +85,12 @@ function App() {
   // Auto-refresh campaigns every 5 minutes when connected
   useEffect(() => {
     if (!contract || !account) return;
-    
+
     const interval = setInterval(() => {
       console.log('🔄 Auto-refreshing campaigns...');
       loadCampaigns(true); // Silent refresh (no loading spinner)
     }, 300000); // 5 minutes
-    
+
     return () => clearInterval(interval);
   }, [contract, account]);
 
@@ -108,7 +116,7 @@ function App() {
 
       // Check/switch network
       const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-      
+
       if (chainId !== SEPOLIA_CHAIN_ID) {
         setStatus({ type: 'warning', message: '⚠️ Switching to Sepolia...' });
         try {
@@ -130,7 +138,7 @@ function App() {
 
       // Setup contract and FHE SDK in parallel for faster loading
       setStatus({ type: 'info', message: '⚙️ Setting up...' });
-      
+
       const [contractInstance, fheInstance] = await Promise.all([
         (async () => {
           const provider = new ethers.BrowserProvider(window.ethereum);
@@ -147,9 +155,9 @@ function App() {
       setTimeout(() => setStatus({ type: '', message: '' }), 2000);
     } catch (error) {
       console.error('Connection error:', error);
-      setStatus({ 
-        type: 'error', 
-        message: `❌ ${error.message || 'Failed to connect wallet'}` 
+      setStatus({
+        type: 'error',
+        message: `❌ ${error.message || 'Failed to connect wallet'}`
       });
     } finally {
       setLoading(false);
@@ -168,7 +176,7 @@ function App() {
 
   const loadCampaigns = async (silent = false) => {
     if (!contract || !account) return;
-    
+
     try {
       if (!silent) setLoadingCampaigns(true);
       const nextId = await contract.nextCampaignId();
@@ -181,7 +189,8 @@ function App() {
         try {
           const info = await contract.getCampaignInfo(i);
           const hasPledged = await contract.hasPledged(i, account);
-          
+          const decryptionResults = await contract.getDecryptedResults(i);
+
           const campaign = {
             id: i,
             owner: info[0],
@@ -192,11 +201,15 @@ function App() {
             description: info[5],
             ethBalance: info[6],  // ETH balance for this campaign
             isOwner: info[0].toLowerCase() === account.toLowerCase(),
-            hasPledged: hasPledged
+            hasPledged: hasPledged,
+            // Decryption status
+            decryptionStatus: ['NotRequested', 'InProgress', 'Completed'][Number(decryptionResults[0])],
+            decryptedTotalPledged: String(decryptionResults[1]),
+            goalReached: decryptionResults[2]
           };
-          
+
           allCampaigns.push(campaign);
-          
+
           if (campaign.isOwner) {
             userCampaigns.push(campaign);
           }
@@ -208,7 +221,6 @@ function App() {
       setCampaigns(allCampaigns);
       setMyCampaigns(userCampaigns);
       setLastRefresh(Date.now());
-      console.log(`✅ Loaded ${allCampaigns.length} campaigns total`);
     } catch (error) {
       console.error('Error loading campaigns:', error);
       if (!silent) {
@@ -257,18 +269,18 @@ function App() {
             <h1>🔐 FHEDge</h1>
             <p>Private Crowdfunding with Fully Homomorphic Encryption</p>
           </div>
-          
-          <div style={{display: 'flex', gap: '15px', alignItems: 'center', marginLeft: 'auto'}}>
-            <button 
+
+          <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginLeft: 'auto' }}>
+            <button
               onClick={toggleTheme}
               className="btn-theme"
               title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
-            
+
             {account && (
-              <button 
+              <button
                 onClick={() => setShowCreateModal(true)}
                 className="btn-primary"
               >
@@ -293,8 +305,8 @@ function App() {
                 <li>⚡ Instant on-chain transactions</li>
               </ul>
             </div>
-            <button 
-              onClick={connectWallet} 
+            <button
+              onClick={connectWallet}
               disabled={loading}
               className="btn-connect"
             >
@@ -328,7 +340,7 @@ function App() {
       {account && contract && fhevmInstance ? (
         <>
           {/* Dashboard Stats */}
-          <Dashboard 
+          <Dashboard
             campaigns={campaigns}
             myCampaigns={myCampaigns}
             account={account}
@@ -341,13 +353,13 @@ function App() {
 
           {/* Tabs */}
           <div className="tabs">
-            <button 
+            <button
               className={`tab ${activeTab === 'all' ? 'active' : ''}`}
               onClick={() => setActiveTab('all')}
             >
               🌍 All Campaigns ({campaigns.length})
             </button>
-            <button 
+            <button
               className={`tab ${activeTab === 'mine' ? 'active' : ''}`}
               onClick={() => setActiveTab('mine')}
             >
@@ -368,7 +380,7 @@ function App() {
 
           {/* Modals */}
           {showCreateModal && (
-            <CreateCampaign 
+            <CreateCampaign
               contract={contract}
               fhevmInstance={fhevmInstance}
               account={account}

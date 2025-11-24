@@ -1,10 +1,11 @@
+import DecryptionResults from './DecryptionResults';
 
 function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
   const timeLeft = campaign.deadline * 1000 - Date.now();
   const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
   const hoursLeft = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-  
+
   const isExpired = timeLeft < 0;
   const isOwner = campaign.isOwner;
   const hasPledged = campaign.hasPledged || false;
@@ -57,7 +58,7 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
           <div className="detail-grid">
             <div className="detail-item">
               <div className="detail-label">👤 Owner</div>
-              <div className="detail-value mono" style={{fontSize: '0.95em'}}>
+              <div className="detail-value mono" style={{ fontSize: '0.95em' }}>
                 {campaign.owner.substring(0, 8)}...{campaign.owner.substring(38)}
                 {isOwner && <span className="badge badge-you">You</span>}
               </div>
@@ -88,7 +89,7 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
 
             <div className="detail-item">
               <div className="detail-label">⏳ Time Remaining</div>
-              <div className="detail-value" style={{fontSize: '0.95em'}}>
+              <div className="detail-value" style={{ fontSize: '0.95em' }}>
                 {isExpired ? (
                   <span className="text-danger">⏰ Expired</span>
                 ) : (
@@ -106,15 +107,22 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
             <div className="privacy-icon">🔐</div>
             <div>
               <h4>Privacy Protected</h4>
-              <p>Goal amount and all pledge amounts are encrypted using FHE. 
-              Only the campaign owner can see their encrypted total.</p>
+              <p>Goal amount and all pledge amounts are encrypted using FHE.
+                Only the campaign owner can see their encrypted total.</p>
             </div>
           </div>
+
+          {/* Decryption Results (NEW) */}
+          <DecryptionResults
+            campaign={campaign}
+            contract={contract}
+            onUpdate={() => window.location.reload()}
+          />
 
           {/* Actions */}
           <div className="detail-actions">
             {campaign.active && !isExpired && !isOwner && (
-              <button 
+              <button
                 onClick={() => {
                   if (!hasPledged) {
                     onClose();
@@ -123,14 +131,14 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
                 }}
                 className="btn-primary btn-large"
                 disabled={hasPledged}
-                style={hasPledged ? {opacity: 0.6, cursor: 'not-allowed'} : {}}
+                style={hasPledged ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
               >
                 {hasPledged ? '✅ Already Pledged' : '💰 Make a Pledge'}
               </button>
             )}
-            
+
             {isOwner && campaign.active && isExpired && !campaign.claimed && campaign.ethBalance > 0 && (
-              <button 
+              <button
                 onClick={async () => {
                   try {
                     const tx = await contract.claimCampaign(campaign.id);
@@ -148,7 +156,7 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
             )}
 
             {isOwner && campaign.active && isExpired && !campaign.claimed && campaign.ethBalance === 0 && (
-              <button 
+              <button
                 disabled
                 className="btn-claim-disabled btn-large"
                 title="No pledges received yet"
@@ -158,7 +166,7 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
             )}
 
             {!isOwner && !campaign.active && !campaign.claimed && (
-              <button 
+              <button
                 onClick={async () => {
                   try {
                     const tx = await contract.refund(campaign.id);

@@ -27,6 +27,13 @@ contract FHEDge is ZamaEthereumConfig {
     // Contract owner (receives platform fees automatically)
     address public immutable platformOwner;
     
+    // Decryption status for campaign results
+    enum DecryptionStatus {
+        NotRequested,   // Decryption hasn't been requested yet
+        InProgress,     // Decryption requested, waiting for callback
+        Completed       // Decryption completed and verified
+    }
+    
     // Campaign structure
     struct Campaign {
         address owner;              // Campaign creator
@@ -38,6 +45,9 @@ contract FHEDge is ZamaEthereumConfig {
         string title;              // Campaign title (public)
         string description;        // Campaign description (public)
         uint256 ethBalance;        // Actual ETH collected for this campaign (after fee)
+        DecryptionStatus decryptionStatus;  // Status of public decryption
+        uint64 decryptedTotalPledged;       // Decrypted total after public reveal
+        bool goalReached;                   // Whether goal was reached (after decryption)
     }
 
     // Mapping from campaign ID to Campaign
@@ -85,6 +95,18 @@ contract FHEDge is ZamaEthereumConfig {
         address indexed platformOwner,
         uint256 feeAmount
     );
+    
+    event DecryptionRequested(
+        uint256 indexed campaignId,
+        bytes32 totalPledgedHandle,
+        bytes32 goalReachedHandle
+    );
+    
+    event DecryptionCompleted(
+        uint256 indexed campaignId,
+        uint64 decryptedTotalPledged,
+        bool goalReached
+    );
 
     modifier nonReentrant() {
         require(!_locked, "Reentrancy detected");
@@ -128,7 +150,10 @@ contract FHEDge is ZamaEthereumConfig {
             claimed: false,
             title: title,
             description: description,
-            ethBalance: 0  // Initialize ETH balance
+            ethBalance: 0,  // Initialize ETH balance
+            decryptionStatus: DecryptionStatus.NotRequested,  // Initial decryption status
+            decryptedTotalPledged: 0,  // Will be set after decryption
+            goalReached: false  // Will be set after decryption
         });
         
         // v0.9: Allow contract and owner to access the encrypted goal
@@ -329,6 +354,94 @@ contract FHEDge is ZamaEthereumConfig {
             campaign.title,
             campaign.description,
             campaign.ethBalance
+        );
+    }
+
+    /**
+     * @notice Request public decryption of campaign results (Step 1 of 3)
+     * @dev Owner can request decryption after deadline to publicly reveal results
+     * @param campaignId The campaign ID to decrypt
+     */
+    function requestDecryptCampaignResult(uint256 campaignId) external {
+        Campaign storage campaign = campaigns[campaignId];
+        
+        require(msg.sender == campaign.owner, "Only owner can request decryption");
+        require(block.timestamp >= campaign.deadline, "Campaign not ended");
+        require(campaign.decryptionStatus == DecryptionStatus.NotRequested, "Decryption already requested");
+        
+        // Get the encrypted goal reached status
+        ebool goalReachedEncrypted = isGoalReached(campaignId);
+        
+        // Mark ciphertexts as publicly decryptable
+        FHE.makePubliclyDecryptable(campaign.totalPledged);
+        FHE.makePubliclyDecryptable(goalReachedEncrypted);
+        
+        // Convert to bytes32 handles for event
+        bytes32 totalPledgedHandle = FHE.toBytes32(campaign.totalPledged);
+        bytes32 goalReachedHandle = FHE.toBytes32(goalReachedEncrypted);
+        
+        // Update status
+        campaign.decryptionStatus = DecryptionStatus.InProgress;
+        
+        emit DecryptionRequested(campaignId, totalPledgedHandle, goalReachedHandle);
+    }
+
+    /**
+     * @notice Callback to verify and store decrypted campaign results (Step 3 of 3)
+     * @dev Anyone can call this after off-chain decryption (Step 2) is complete
+     * @param campaignId The campaign ID
+     * @param cleartexts ABI-encoded decrypted values (uint64 totalPledged, bool goalReached)
+     * @param decryptionProof Proof from Zama KMS that validates the decryption
+     */
+    function callbackDecryptCampaignResult(
+        uint256 campaignId,
+        bytes memory cleartexts,
+        bytes memory decryptionProof
+    ) external {
+        Campaign storage campaign = campaigns[campaignId];
+        
+        require(campaign.decryptionStatus == DecryptionStatus.InProgress, "Decryption not in progress");
+        
+        // Rebuild handles list in SAME ORDER as requestDecryptCampaignResult
+        // CRITICAL: Order must match for proof verification
+        ebool goalReachedEncrypted = isGoalReached(campaignId);
+        bytes32[] memory cts = new bytes32[](2);
+        cts[0] = FHE.toBytes32(campaign.totalPledged);
+        cts[1] = FHE.toBytes32(goalReachedEncrypted);
+        
+        // Verify the decryption proof
+        // This ensures cleartexts are authentic decryptions of the ciphertexts
+        FHE.checkSignatures(cts, cleartexts, decryptionProof);
+        
+        // Decode the cleartext values
+        // Order must match: (totalPledged, goalReached)
+        (uint64 totalPledged, bool goalReached) = abi.decode(cleartexts, (uint64, bool));
+        
+        // Store decrypted results
+        campaign.decryptedTotalPledged = totalPledged;
+        campaign.goalReached = goalReached;
+        campaign.decryptionStatus = DecryptionStatus.Completed;
+        
+        emit DecryptionCompleted(campaignId, totalPledged, goalReached);
+    }
+
+    /**
+     * @notice Get decrypted campaign results (if decryption is complete)
+     * @param campaignId The campaign ID
+     * @return status Current decryption status
+     * @return totalPledged Decrypted total pledged amount (0 if not decrypted)
+     * @return goalReached Whether goal was reached (false if not decrypted)
+     */
+    function getDecryptedResults(uint256 campaignId) external view returns (
+        DecryptionStatus status,
+        uint64 totalPledged,
+        bool goalReached
+    ) {
+        Campaign storage campaign = campaigns[campaignId];
+        return (
+            campaign.decryptionStatus,
+            campaign.decryptedTotalPledged,
+            campaign.goalReached
         );
     }
 }

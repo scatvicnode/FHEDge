@@ -45,15 +45,15 @@ async function main() {
   console.log("Deploying contract...");
   
   // Deploy the contract
-  const confidentialPledge = await ConfidentialPledge.deploy();
+  const FHEDge = await ConfidentialPledge.deploy();
   
   console.log("Waiting for deployment...");
-  await confidentialPledge.waitForDeployment();
+  await FHEDge.waitForDeployment();
   
-  const address = await confidentialPledge.getAddress();
+  const address = await FHEDge.getAddress();
   
   console.log("\n✅ Deployment successful!");
-  console.log(`ConfidentialPledge deployed to: ${address}`);
+  console.log(`FHEDge deployed to: ${address}`);
   console.log("\n📝 Save this address for future interactions!");
   
   // Verification is optional - skip for now
