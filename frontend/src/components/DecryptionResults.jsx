@@ -5,7 +5,7 @@ import { publicDecryptMultiple } from '../fhevmInstance';
  * Decryption Results Component
  * Displays campaign decryption status and handles the 3-step workflow
  */
-function DecryptionResults({ campaign, contract, onUpdate }) {
+function DecryptionResults({ campaign, contract, onUpdate, onClose }) {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState('');
     const isOwner = campaign.isOwner;
@@ -72,7 +72,9 @@ function DecryptionResults({ campaign, contract, onUpdate }) {
             setTimeout(() => {
                 setStatus('');
                 if (onUpdate) onUpdate();
-            }, 2000);
+                // Close modal to show refreshed data
+                if (onClose) onClose();
+            }, 1500);
 
         } catch (error) {
             console.error('Decryption failed:', error);
@@ -83,8 +85,14 @@ function DecryptionResults({ campaign, contract, onUpdate }) {
         }
     };
 
-    // Don't show section if not owner or before deadline
-    if (!isOwner || !isExpired) {
+    // Show "Reveal Results" button only to owner after deadline
+    // Show completed results to EVERYONE
+    const showRevealButton = isOwner && isExpired && campaign.decryptionStatus === 'NotRequested' && campaign.active;
+    const showResults = campaign.decryptionStatus === 'Completed';
+    const showInProgress = campaign.decryptionStatus === 'InProgress' && isOwner;
+
+    // Don't show anything if not expired yet, or if nothing to display
+    if (!isExpired && !showResults) {
         return null;
     }
 
@@ -99,8 +107,8 @@ function DecryptionResults({ campaign, contract, onUpdate }) {
                 </div>
             )}
 
-            {/* Not Requested State */}
-            {campaign.decryptionStatus === 'NotRequested' && canRequestDecryption && (
+            {/* Reveal Button - Owner only, before decryption */}
+            {showRevealButton && (
                 <div>
                     <p style={{ marginBottom: '15px', color: '#666' }}>
                         🔒 Campaign results are encrypted. Reveal them publicly to show transparency.
@@ -118,8 +126,8 @@ function DecryptionResults({ campaign, contract, onUpdate }) {
                 </div>
             )}
 
-            {/* In Progress State */}
-            {campaign.decryptionStatus === 'InProgress' && (
+            {/* In Progress - Owner only */}
+            {showInProgress && (
                 <div className="privacy-notice">
                     <span className="privacy-icon">⏳</span>
                     <div>
@@ -129,8 +137,8 @@ function DecryptionResults({ campaign, contract, onUpdate }) {
                 </div>
             )}
 
-            {/* Completed State */}
-            {campaign.decryptionStatus === 'Completed' && (
+            {/* Completed Results - VISIBLE TO EVERYONE */}
+            {showResults && (
                 <div style={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     padding: '20px',
@@ -150,7 +158,7 @@ function DecryptionResults({ campaign, contract, onUpdate }) {
                         </div>
                     </div>
                     <p style={{ marginTop: '15px', fontSize: '0.85em', opacity: 0.8 }}>
-                        📊 These values are now publicly visible to everyone
+                        🌐 Results decrypted and verified on-chain - visible to everyone
                     </p>
                 </div>
             )}

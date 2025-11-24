@@ -1,6 +1,6 @@
 import DecryptionResults from './DecryptionResults';
 
-function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
+function ViewCampaign({ campaign, contract, account, onClose, onPledge, onRefresh }) {
   const timeLeft = campaign.deadline * 1000 - Date.now();
   const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
   const hoursLeft = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -94,7 +94,7 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
                   <span className="text-danger">⏰ Expired</span>
                 ) : (
                   <span className="highlight">
-                    {daysLeft > 0 && `${daysLeft}d `}
+                    {daysLeft > 0 && `${daysLeft} d `}
                     {hoursLeft}h {minutesLeft}m
                   </span>
                 )}
@@ -116,7 +116,8 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
           <DecryptionResults
             campaign={campaign}
             contract={contract}
-            onUpdate={() => window.location.reload()}
+            onUpdate={onRefresh}
+            onClose={onClose}
           />
 
           {/* Actions */}
@@ -146,7 +147,7 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
                     alert('✅ Campaign claimed successfully!');
                     onClose();
                   } catch (error) {
-                    alert(`❌ ${error.message}`);
+                    alert(`❌ ${error.message} `);
                   }
                 }}
                 className="btn-success btn-large"
@@ -174,7 +175,7 @@ function ViewCampaign({ campaign, contract, account, onClose, onPledge }) {
                     alert('✅ Refund successful!');
                     onClose();
                   } catch (error) {
-                    alert(`❌ ${error.message}`);
+                    alert(`❌ ${error.message} `);
                   }
                 }}
                 className="btn-secondary btn-large"

@@ -165,11 +165,11 @@ User Input (Goal/Pledge Amount in ETH)
 // frontend/src/fhevmInstance.ts
 class FheInitializer {
   static async initializeWasm(sdk: any): Promise<void> {
-    console.log('⚙️  Initializing SDK (loading WASM)...');
+    console.log('⚙️  FHEVM SDK: Initializing WebAssembly modules...');
     
     try {
       await sdk.initSDK();
-      console.log('✅ WASM loaded successfully');
+      console.log('✅ FHEVM SDK: Ready (WASM modules loaded)');
     } catch (error) {
       console.error('❌ WASM initialization failed:', error);
       throw new Error(ErrorMessages.WASM_FAILED);
@@ -503,8 +503,8 @@ await contract.callbackDecryptCampaignResult(
 ```javascript
 const results = await contract.getDecryptedResults(campaignId);
 
-console.log('Total Pledged:', results.totalPledged / 1e18, 'ETH');
-console.log('Goal Reached:', results.goalReached);
+console.log('📊 Total Pledged:', results.totalPledged / 1e18, 'ETH');
+console.log('🎯 Goal Reached:', results.goalReached);
 ```
 
 ### 🎨 UI Components
@@ -1169,7 +1169,7 @@ npm run dev
 
 ```bash
 # 1. Set up .env with your private key
-PRIVATE_KEY=your_key_here_with_0x_value
+PRIVATE_KEY=your_private_key_here_with_0x_value
 
 # 2. Deploy
 npm run deploy:sepolia

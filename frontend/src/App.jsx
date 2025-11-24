@@ -413,6 +413,7 @@ function App() {
                 setSelectedCampaign(null);
               }}
               onPledge={handlePledgeClick}
+              onRefresh={() => loadCampaigns(true)}
             />
           )}
         </>

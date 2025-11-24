@@ -46,7 +46,7 @@ class NetworkUtils {
   static async validateNetwork(): Promise<void> {
     try {
       const chainId = await this.getCurrentChainId();
-      console.log('🔗 Connected to chain ID:', chainId);
+      console.log('🌐 Blockchain Network:', chainId === '0xaa36a7' ? 'Sepolia Testnet' : `Chain ID ${chainId}`);
 
       if (!this.isSepoliaNetwork(chainId)) {
         console.warn('⚠️  Not on Sepolia testnet. Current chain:', chainId);
@@ -80,14 +80,14 @@ class KeypairManager {
     const stored = this.loadStoredKeypair();
 
     if (stored) {
-      console.log('✅ Using stored keypair');
+      console.log('🔐 FHE Keypair: Loaded from local storage');
       return stored;
     }
 
-    console.log('🔑 Generating new keypair...');
+    console.log('🔑 FHE Keypair: Generating new cryptographic keys...');
     const keypair = this.generateKeypair(sdk);
     this.storeKeypair(keypair);
-    console.log('✅ Keypair generated and stored');
+    console.log('✅ FHE Keypair: Generated and saved to local storage');
 
     return keypair;
   }
@@ -126,11 +126,11 @@ class SdkValidator {
 // ============ INITIALIZATION CORE ============
 class FheInitializer {
   static async initializeWasm(sdk: any): Promise<void> {
-    console.log('⚙️  Initializing SDK (loading WASM)...');
+    console.log('⚙️  FHEVM SDK: Initializing WebAssembly modules...');
 
     try {
       await sdk.initSDK();
-      console.log('✅ WASM loaded successfully');
+      console.log('✅ FHEVM SDK: Ready (WASM modules loaded)');
     } catch (error) {
       console.error('❌ WASM initialization failed:', error);
       throw new Error(ErrorMessages.WASM_FAILED);
@@ -150,7 +150,7 @@ class FheInitializer {
 
     try {
       const instance = await sdk.createInstance(config);
-      console.log('✅ FHE Instance created successfully!');
+      console.log('✅ FHEVM Instance: Connected to Zama network relayer');
       return instance;
     } catch (error) {
       console.error('❌ Failed to create FHE instance:', error);
@@ -244,9 +244,9 @@ export async function publicDecryptMultiple(handles: string[]): Promise<{
   });
 
   try {
-    console.log('🔓 Requesting public decryption for handles:', handles);
+    console.log('🔓 Public Decryption: Sending request to Zama KMS for', handles.length, 'encrypted values');
     const results = await fhe.publicDecrypt(handles);
-    console.log('✅ Public decryption successful');
+    console.log('✅ Public Decryption: Values decrypted with cryptographic proof');
     return results;
   } catch (error: any) {
     console.error('❌ Public decryption failed:', error);
@@ -270,9 +270,9 @@ export async function userDecryptValue(
   validateCiphertext(handle);
 
   try {
-    console.log('🔓 User decrypting handle:', handle);
+    console.log('🔓 User Decryption: Requesting private value from encrypted handle');
     const result = await fhe.userDecrypt(handle, contractAddress, userAddress);
-    console.log('✅ User decryption successful');
+    console.log('✅ User Decryption: Value decrypted successfully');
     return BigInt(result);
   } catch (error: any) {
     console.error('❌ User decryption failed:', error);
